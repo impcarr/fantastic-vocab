@@ -18,11 +18,11 @@ logger = logging.getLogger(__name__)
 argParser = argparse.ArgumentParser(
     description="Extract text from EPUB files")
 
-def create_aggrecount(cur):
+def create_aggrecount(cur: sqlite3.Cursor) -> None:
     sql = """create table if not exists aggrecount (word text primary key, count int, en_us boolean, is_num boolean);"""
     cur.execute(sql)
 
-def build_aggrecount(database):
+def build_aggrecount(database: str) -> None:
     con = sqlite3.connect(database)
     cur = con.cursor()
     create_aggrecount(cur)
@@ -31,18 +31,18 @@ def build_aggrecount(database):
     cur.execute(sql)
     con.commit()
 
-def check_title(filepath, title):
+def check_title(filepath: str, title: str) -> str:
     accept = input((f"{title} is the extracted title of the book at {filepath}. Press enter to accept, or N to enter a title manually: "))
     if accept == 'N':
         title = input("Please enter the new title: ")
     return title
 
-def check_author(title, author):
+def check_author(title: str, author: str) -> str:
     accept = input((f"{author} is the extracted author of {title}. Press enter to accept, or N to enter the author manually: "))
     if accept == 'N':
         author = input("Please input the new author: ")
     
-def naive_counter(words):
+def naive_counter(words: list) -> dict:
     ret = dict()
     for word in words:
         if word in ret:
@@ -55,7 +55,7 @@ def double_check(word: str,validict: dict) -> bool:
     return validict.check(word) or validict.check(word.capitalize())
 
 
-def process_text(text: str):
+def process_text(text: str) -> list:
     text = text.replace("’", "'")
 
     word_pattern = r"\b\w+(?:'\w+)?\b"
@@ -78,13 +78,13 @@ def parseCommandLine():
     return args
 
 
-def errorExit(msg):
+def errorExit(msg: str) -> None:
     """Print error message and exit"""
     sys.stderr.write("ERROR: " + msg + "\n")
     sys.exit(1)
 
 
-def errorInfo(msg):
+def errorInfo(msg: str) -> None:
     """Print error message"""
     sys.stderr.write("ERROR: " + msg + "\n")
 
@@ -98,7 +98,7 @@ class HTMLFilter(HTMLParser):
         self.text += data
 
 
-def extract_title(book):
+def extract_title(book: epub.EpubBook) -> str:
     try:
         title = book.get_metadata('DC', 'title')[0][0]
     except Exception as e:
@@ -107,7 +107,7 @@ def extract_title(book):
     return title
     
 
-def extract_author(book):
+def extract_author(book: epub.EpubBook) -> str:
     try:
         author = book.get_metadata('DC', 'creator')[0][0]
     except Exception as e:
@@ -116,7 +116,7 @@ def extract_author(book):
     return author
 
 
-def extract_date(book):
+def extract_date(book: epub.EpubBook) -> str:
     try:
         date = book.get_metadata('DC', 'date')[0][0]
     except Exception:
@@ -124,12 +124,12 @@ def extract_date(book):
     return date
 
 
-def create_library(cur):
+def create_library(cur: sqlite3.Cursor) -> None:
     sql = """create table if not exists library (filepath text primary key unique, title text, author text, date date);"""
     cur.execute(sql)
 
 
-def insert_to_library_table(title, author, filepath, date, cur, thorough=False):
+def insert_to_library_table(title: str, author: str, filepath: str, date: str, cur: sqlite3.Cursor, thorough:bool = False) -> None:
     sql = """INSERT OR REPLACE INTO library (filepath, title, author, date)
            VALUES (?, ?, ?, ?);"""
     if thorough:
@@ -142,7 +142,7 @@ def insert_to_library_table(title, author, filepath, date, cur, thorough=False):
         print(e)
 
 
-def update_library_table(filepath, database='vocab.db'):
+def update_library_table(filepath: str, database: str = 'vocab.db') -> None:
     con = sqlite3.connect(database)
     cur = con.cursor()
 
@@ -166,12 +166,12 @@ def update_library_table(filepath, database='vocab.db'):
     con.commit()
 
 
-def create_megacount(cur):
+def create_megacount(cur: sqlite3.Cursor) -> None:
     sql = """create table if not exists megacount (filepath text, word text, count int, en_us boolean, is_num boolean, PRIMARY KEY (filepath, word));"""
     cur.execute(sql)
 
 
-def insert_to_megacount_table(entry: str, number: int, en_us: bool, file_in: str, cur):
+def insert_to_megacount_table(entry: str, number: int, en_us: bool, file_in: str, cur: sqlite3.Cursor) -> None:
     sql = """INSERT OR REPLACE INTO megacount (filepath, word, count, en_us, is_num)
            VALUES (?, ?, ?, ?, ?);"""
     is_num = entry.isnumeric()
@@ -179,7 +179,7 @@ def insert_to_megacount_table(entry: str, number: int, en_us: bool, file_in: str
     
 
 
-def update_megacount_table(filepath, database='vocab.db'):
+def update_megacount_table(filepath: str, database: str = 'vocab.db') -> None:
     update_start = time.time()
     files = 0
     failures = 0
@@ -235,7 +235,6 @@ def main():
     if not os.path.isdir(dir_in):
         msg = "input dir doesn't exist"
         errorExit(msg)
-    
     
     update_library_table(dir_in, db)
     update_megacount_table(dir_in, db)
