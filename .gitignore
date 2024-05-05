@@ -2,6 +2,7 @@ boonks.zip
 delicious_books
 .venv
 outputdir/*
-vocab.db
+*.db
 test.txt
 .env
+*.log
