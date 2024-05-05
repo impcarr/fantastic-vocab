@@ -1,14 +1,15 @@
-import os
-import sys
 import argparse
-from html.parser import HTMLParser
-import ebooklib
-from ebooklib import epub
-import enchant
-import sqlite3
-import time
-import re
 import logging
+import os
+import re
+import sqlite3
+import sys
+import time
+from html.parser import HTMLParser
+
+import ebooklib
+import enchant
+from ebooklib import epub
 
 # Create logger
 logger = logging.getLogger(__name__)
