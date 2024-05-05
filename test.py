@@ -1,6 +1,5 @@
 import os
 import sys
-import csv
 import argparse
 from html.parser import HTMLParser
 import ebooklib
@@ -8,7 +7,6 @@ from ebooklib import epub
 import enchant
 import sqlite3
 import time
-import collections
 import re
 import logging
 
@@ -35,13 +33,13 @@ def build_aggrecount(database):
 def check_title(filepath, title):
     accept = input((f"{title} is the extracted title of the book at {filepath}. Press enter to accept, or N to enter a title manually: "))
     if accept == 'N':
-        title = input(f"Please enter the new title: ")
+        title = input("Please enter the new title: ")
     return title
 
 def check_author(title, author):
     accept = input((f"{author} is the extracted author of {title}. Press enter to accept, or N to enter the author manually: "))
     if accept == 'N':
-        author = input(f"Please input the new author: ")
+        author = input("Please input the new author: ")
     
 def naive_counter(words):
     ret = dict()
@@ -120,9 +118,7 @@ def extract_author(book):
 def extract_date(book):
     try:
         date = book.get_metadata('DC', 'date')[0][0]
-    except Exception as e:
-        # print(e)
-        # print(book.get_metadata('DC', 'title')[0][0])
+    except Exception:
         date = None
     return date
 
@@ -239,10 +235,10 @@ def main():
         msg = "input dir doesn't exist"
         errorExit(msg)
     
+    
+    update_library_table(dir_in, db)
+    update_megacount_table(dir_in, db)
     build_aggrecount(db)
-    #update_library_table(dir_in, db)
-
-    #update_megacount_table(dir_in, db)
 
 
 if __name__ == "__main__":
