@@ -19,6 +19,19 @@ logger = logging.getLogger(__name__)
 argParser = argparse.ArgumentParser(
     description="Extract text from EPUB files")
 
+def create_aggrecount(cur):
+    sql = """create table if not exists aggrecount (word text primary key, count int, en_us boolean, is_num boolean);"""
+    cur.execute(sql)
+
+def build_aggrecount(database):
+    con = sqlite3.connect(database)
+    cur = con.cursor()
+    create_aggrecount(cur)
+    sql = """insert into aggrecount (word, count, en_us, is_num)
+            select word, sum(count), en_us, is_num from megacount group by word, en_us, is_num;"""
+    cur.execute(sql)
+    con.commit()
+
 def check_title(filepath, title):
     accept = input((f"{title} is the extracted title of the book at {filepath}. Press enter to accept, or N to enter a title manually: "))
     if accept == 'N':
@@ -226,9 +239,10 @@ def main():
         msg = "input dir doesn't exist"
         errorExit(msg)
     
+    build_aggrecount(db)
     #update_library_table(dir_in, db)
 
-    update_megacount_table(dir_in, db)
+    #update_megacount_table(dir_in, db)
 
 
 if __name__ == "__main__":
