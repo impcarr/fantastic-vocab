@@ -1,12 +1,3 @@
-#! /usr/bin/env python3
-"""
-EPUB text extraction with Ebooklib demo
-
-Requires Ebooklib:
-
-https://github.com/aerkalov/ebooklib
-"""
-
 import os
 import sys
 import csv
@@ -19,19 +10,49 @@ import sqlite3
 import time
 import collections
 import re
+import pandas as pd
+from datetime import datetime
+
 
 # Create argument parser
 argParser = argparse.ArgumentParser(
     description="Extract text from EPUB files")
 
-def init_book_table(book_title):
-    con = sqlite3.connect("vocab.db")
-    cur = con.cursor()
-    try:
-        cur.execute(f"CREATE TABLE {book_title}(title, word, count, en_us)")
-    except Exception:
-        print('Table {book_title} already exists!')
+def connect_to_db(db):
+    con = sqlite3.connect(db)
+    return con.cursor()
 
+def init_book_table(book_title, cur):
+    try:
+        cur.execute(f"CREATE TABLE \"{book_title}\"(title, word, count, en_us)")
+    except sqlite3.OperationalError as e:
+        print(e)
+
+def insert_to_library_table(title, author, filepath, date, cur, thorough=False):
+    sql = """INSERT OR REPLACE INTO library (filepath, title, author, date)
+           VALUES (?, ?, ?, ?);"""
+    if thorough:
+        title = check_title(filepath, title)
+    if thorough:
+        author = check_author(title, author)
+    try:
+        cur.execute(sql, (filepath, title, author, date))
+    except sqlite3.OperationalError as e:
+        print(e)
+
+
+def check_title(filepath, title):
+    accept = input((f"{title} is the extracted title of the book at {filepath}. Press enter to accept, or N to enter a title manually: "))
+    if accept == 'N':
+        title = input(f"Please enter the new title: ")
+    return title
+
+def check_author(title, author):
+    accept = input((f"{author} is the extracted author of {title}. Press enter to accept, or N to enter the author manually: "))
+    if accept == 'N':
+        author = input(f"Please input the new author: ")
+    
+        
 def naive_counter(words):
     ret = dict()
     for word in words:
@@ -90,6 +111,18 @@ class HTMLFilter(HTMLParser):
     def handle_data(self, data):
         self.text += data
 
+def extract_title(book):
+    #book = epub.read_epub(file)
+    return book.get_metadata('DC', 'title')[0][0]
+
+def extract_author(book):
+    #book = epub.read_epub(file)
+    return book.get_metadata('DC', 'creator')[0][0]
+
+def extract_date(book):
+    #book = epub.read_epub()
+    return book.get_metadata('DC', 'date')[0][0] 
+
 
 def extractEbooklib(fileIn, fileOut):
     """Extract text from input file using Ebooklib
@@ -140,12 +173,12 @@ def extractEbooklib(fileIn, fileOut):
 
         #print(f'invalids {invalids}')
         most = max(counts, key=counts.get)
-        print(f'{most},{counts[most]}')
+        #print(f'{most},{counts[most]}')
 
         #print(fileIn)
         
 
-        exit()
+        #exit()
         try:
             with open(fileOut, 'w', encoding='utf-8') as fout:
                 fout.write(content)
@@ -182,31 +215,52 @@ def main():
     # Summary output file
     csvOut = os.path.join(dirOut, "summary-ebooklib.csv")
     csvList = [["fileName", "noWords"]]
+    
+    
+    con = sqlite3.connect('vocab.db')
+    cur = con.cursor()
+
+    
     count = 0
     # for dirpath, dirnames, filenames in os.walk(dirIn):
     #     for filename in [f for f in filenames if f.endswith(".epub")]:
     #         print(os.path.join(dirpath, filename))
     #         count+=1
-    print(count)  
+    #print(count)
+    bookcheck = pd.DataFrame(columns=['filepath','title','author']) 
     # Iterate over files in input directory and its subfolders
     for dirpath, dirnames, filenames in os.walk(dirIn):
         for filename in [f for f in filenames if f.lower().endswith(".epub")]:
             fIn = os.path.abspath(os.path.join(dirpath, filename))
-            print(fIn)
+            bookarr = [fIn]
+            #print(fIn)
+            book = epub.read_epub(fIn)
+            title = extract_title(book)
+            author = extract_author(book)
+            date = extract_date(book)
+            insert_to_library_table(title, author, fIn, date, cur)
             if os.path.isfile(fIn):
                 # Get base name and extension for each file
                 baseName = os.path.splitext(filename)[0]
+                
+                
+                bookarr.append(baseName)
+                bookarr.append(dirpath)
                 extension = os.path.splitext(filename)[1]
+                
 
                 # Only process files with .epub extension (case-insensitive,
                 # just to be safe)
-                if extension.upper() == ".EPUB":
-                    fOutTextract = os.path.join(dirOut, baseName + "_ebooklib.txt")
-                    noWords = extractEbooklib(fIn, fOutTextract)
-                    csvList.append([filename, noWords])
+                # if extension.upper() == ".EPUB":
+                #     fOutTextract = os.path.join(dirOut, baseName + "_ebooklib.txt")
+                #     noWords = extractEbooklib(fIn, fOutTextract)
+                #     csvList.append([filename, noWords])
         
     
     # Write summary file
+
+    #init_book_table(baseName, cur)
+    con.commit()
     try:
         with open(csvOut, 'w', encoding='utf-8') as csvout:
             csvWriter = csv.writer(csvout)
@@ -224,6 +278,4 @@ def main():
 
 
 if __name__ == "__main__":
-    init_table("test")
-    exit()
     main()
