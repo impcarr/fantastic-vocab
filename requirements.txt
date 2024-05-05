@@ -1,0 +1,9 @@
+EbookLib==0.18
+lxml==5.2.1
+numpy==1.26.4
+pandas==2.2.2
+pyenchant==3.2.2
+python-dateutil==2.9.0.post0
+pytz==2024.1
+six==1.16.0
+tzdata==2024.1
