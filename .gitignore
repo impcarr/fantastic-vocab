@@ -4,3 +4,4 @@ delicious_books
 outputdir/*
 vocab.db
 test.txt
+.env
